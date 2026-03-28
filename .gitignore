@@ -1,0 +1,10 @@
+.env
+credentials.json
+token.json
+__pycache__/
+.venv/
+venv/
+*.pyc
+browser-data/
+bb-extension/
+.DS_Store
