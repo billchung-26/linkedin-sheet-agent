@@ -9,3 +9,7 @@ google-auth-httplib2>=0.2.0
 
 # Browser automation for LinkedIn
 playwright>=1.41.0
+
+# Web UI
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0

@@ -97,6 +97,20 @@ Edit `.env`:
 
 ### 5. Run
 
+**Option A — Web UI (recommended)**
+
+```bash
+python web_app.py
+```
+
+Open [http://localhost:8000](http://localhost:8000) in your browser. The UI lets you:
+- Edit settings (Sheet ID, columns) without touching `.env`
+- Connect your Google account via OAuth
+- Preview your sheet data before scraping
+- Start a scraping run with one click
+
+**Option B — CLI**
+
 ```bash
 # Test first
 python run_agent.py --dry-run

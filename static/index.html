@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkedIn Sheet Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e1117;
+  --surface: #161b22;
+  --surface-hover: #1c2129;
+  --border: #30363d;
+  --border-accent: #3d444d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+  --accent: #f0883e;
+  --accent-glow: rgba(240, 136, 62, 0.15);
+  --success: #3fb950;
+  --success-bg: rgba(63, 185, 80, 0.1);
+  --error: #f85149;
+  --error-bg: rgba(248, 81, 73, 0.1);
+  --radius: 8px;
+  --mono: 'DM Mono', 'Menlo', monospace;
+  --sans: 'Outfit', system-ui, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* --- Header --- */
+.header {
+  padding: 2rem 2rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header .mark {
+  width: 36px;
+  height: 36px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--bg);
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.header .subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 300;
+  margin-top: 0.1rem;
+}
+
+/* --- Layout --- */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+}
+
+.panel {
+  background: var(--bg);
+  padding: 1.75rem 2rem;
+  min-height: 280px;
+}
+
+.panel-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-bottom: 1.25rem;
+}
+
+/* --- Form elements --- */
+.field {
+  margin-bottom: 1rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+  font-weight: 400;
+}
+
+.field input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.field input::placeholder {
+  color: var(--text-dim);
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* --- Buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-accent);
+}
+
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: #e67d32;
+  border-color: #e67d32;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- Status badges --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.badge-ok {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid rgba(63, 185, 80, 0.25);
+}
+
+.badge-err {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid rgba(248, 81, 73, 0.25);
+}
+
+.badge .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* --- Auth panel --- */
+.auth-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* --- Table --- */
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.table-wrap th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.table-wrap td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.table-wrap tr:last-child td { border-bottom: none; }
+
+.table-wrap tr:hover td { background: var(--surface); }
+
+.table-meta {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.5rem;
+}
+
+/* --- Run panel --- */
+.run-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.run-options {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.run-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.run-options input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+}
+
+.run-options input[type="number"] {
+  width: 70px;
+  padding: 0.35rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.run-options input[type="number"]:focus {
+  border-color: var(--accent);
+}
+
+/* --- Spinner --- */
+.spinner {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.spinner.active { display: flex; }
+
+.spinner .ring {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Summary card --- */
+.summary {
+  display: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.summary.active { display: block; }
+
+.summary-header {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.stat {
+  background: var(--bg);
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat .num {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.stat .label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 0.2rem;
+}
+
+.stat.ok .num { color: var(--success); }
+.stat.err .num { color: var(--error); }
+
+/* --- Toast --- */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-ok { background: var(--success); color: var(--bg); }
+.toast-err { background: var(--error); color: #fff; }
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .header { padding: 1.5rem; }
+  .panel { padding: 1.5rem; }
+}
+
+/* --- Enter animations --- */
+.panel { animation: fadeUp 0.4s ease both; }
+.panel:nth-child(2) { animation-delay: 0.05s; }
+.panel:nth-child(3) { animation-delay: 0.1s; }
+.panel:nth-child(4) { animation-delay: 0.15s; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="mark">Li</div>
+  <div>
+    <h1>LinkedIn Sheet Agent</h1>
+    <div class="subtitle">Scrape profiles from your Google Sheet via bb-browser</div>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- ============ SETTINGS ============ -->
+  <div class="panel" id="panel-settings">
+    <div class="panel-label">01 &mdash; Settings</div>
+    <div class="field">
+      <label>Google Sheet ID</label>
+      <input id="cfg-sheet-id" type="text" placeholder="e.g. 1FvdiCgcJUcE1xt...">
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Sheet Name</label>
+        <input id="cfg-sheet-name" type="text" placeholder="Sheet1">
+      </div>
+      <div class="field">
+        <label>URL Column</label>
+        <input id="cfg-url-col" type="text" placeholder="F" maxlength="2">
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Start Row</label>
+        <input id="cfg-start-row" type="text" placeholder="2">
+      </div>
+      <div class="field">
+        <label>Company Column</label>
+        <input id="cfg-company-col" type="text" placeholder="I" maxlength="2">
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Title Column</label>
+        <input id="cfg-title-col" type="text" placeholder="J" maxlength="2">
+      </div>
+      <div class="field" style="display:flex;align-items:flex-end;">
+        <button class="btn btn-primary" id="btn-save-config" onclick="saveConfig()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AUTH ============ -->
+  <div class="panel" id="panel-auth">
+    <div class="panel-label">02 &mdash; Google Account</div>
+    <div class="auth-box">
+      <div id="auth-badge"></div>
+      <div>
+        <button class="btn" id="btn-connect" onclick="startAuth()">Connect Google Account</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-dim);line-height:1.6;">
+        Connects via OAuth to read &amp; write your Google Sheet.<br>
+        Make sure <code style="font-family:var(--mono);background:var(--surface);padding:0.15rem 0.4rem;border-radius:4px;">credentials.json</code> is in the project folder.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ SHEET PREVIEW ============ -->
+  <div class="panel" id="panel-preview">
+    <div class="panel-label">03 &mdash; Sheet Preview</div>
+    <button class="btn" id="btn-preview" onclick="loadPreview()">Load Preview</button>
+    <div id="preview-area"></div>
+  </div>
+
+  <!-- ============ RUN ============ -->
+  <div class="panel" id="panel-run">
+    <div class="panel-label">04 &mdash; Run Agent</div>
+    <div class="run-box">
+      <div class="run-options">
+        <label><input type="checkbox" id="opt-resume"> Resume (skip filled)</label>
+        <label>Limit: <input type="number" id="opt-limit" min="1" placeholder="all"></label>
+      </div>
+      <div>
+        <button class="btn btn-primary" id="btn-run" onclick="startRun()">Start Scraping</button>
+      </div>
+      <div class="spinner" id="run-spinner">
+        <div class="ring"></div>
+        <span>Scraping profiles&hellip; this may take a few minutes.</span>
+      </div>
+      <div class="summary" id="run-summary">
+        <div class="summary-header">Run Complete</div>
+        <div class="summary-stats">
+          <div class="stat" id="stat-total"><div class="num">0</div><div class="label">Total rows</div></div>
+          <div class="stat ok" id="stat-ok"><div class="num">0</div><div class="label">Succeeded</div></div>
+          <div class="stat err" id="stat-err"><div class="num">0</div><div class="label">Errors</div></div>
+          <div class="stat" id="stat-skip"><div class="num">0</div><div class="label">Skipped</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function toast(msg, ok = true) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (ok ? 'toast-ok' : 'toast-err');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+// ---- Config ----
+async function loadConfig() {
+  const c = await api('/api/config');
+  $('cfg-sheet-id').value = c.GOOGLE_SHEET_ID || '';
+  $('cfg-sheet-name').value = c.SHEET_NAME || '';
+  $('cfg-url-col').value = c.URL_COLUMN || '';
+  $('cfg-start-row').value = c.DATA_START_ROW || '';
+  $('cfg-company-col').value = c.COMPANY_COLUMN || '';
+  $('cfg-title-col').value = c.TITLE_COLUMN || '';
+}
+
+async function saveConfig() {
+  $('btn-save-config').disabled = true;
+  try {
+    await api('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        GOOGLE_SHEET_ID: $('cfg-sheet-id').value,
+        SHEET_NAME: $('cfg-sheet-name').value,
+        URL_COLUMN: $('cfg-url-col').value,
+        DATA_START_ROW: $('cfg-start-row').value,
+        COMPANY_COLUMN: $('cfg-company-col').value,
+        TITLE_COLUMN: $('cfg-title-col').value,
+      }),
+    });
+    toast('Settings saved');
+  } catch (e) {
+    toast('Failed to save: ' + e.message, false);
+  }
+  $('btn-save-config').disabled = false;
+}
+
+// ---- Auth ----
+async function checkAuth() {
+  const d = await api('/api/auth/status');
+  const el = $('auth-badge');
+  if (d.authenticated) {
+    el.innerHTML = '<span class="badge badge-ok"><span class="dot"></span>Connected</span>';
+    $('btn-connect').textContent = 'Reconnect';
+  } else {
+    el.innerHTML = '<span class="badge badge-err"><span class="dot"></span>' + (d.message || 'Not connected') + '</span>';
+  }
+}
+
+async function startAuth() {
+  try {
+    const d = await api('/api/auth/start', { method: 'POST' });
+    if (d.auth_url) {
+      window.open(d.auth_url, '_blank');
+      toast('Complete authorization in the opened tab');
+      setTimeout(checkAuth, 8000);
+    } else {
+      toast(d.error || 'Could not start auth', false);
+    }
+  } catch (e) {
+    toast('Auth error: ' + e.message, false);
+  }
+}
+
+// ---- Preview ----
+async function loadPreview() {
+  $('btn-preview').disabled = true;
+  $('btn-preview').textContent = 'Loading…';
+  try {
+    const d = await api('/api/sheet/preview');
+    if (d.error) { toast(d.error, false); return; }
+    let html = '<div class="table-wrap"><table><thead><tr>';
+    (d.headers || []).forEach((h, i) => {
+      html += '<th>' + esc(h || 'Col ' + String.fromCharCode(65 + i)) + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    (d.rows || []).forEach(row => {
+      html += '<tr>';
+      row.forEach(cell => { html += '<td title="' + esc(cell) + '">' + esc(cell) + '</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    html += '<div class="table-meta">Showing ' + (d.rows || []).length + ' of ' + (d.total_rows || 0) + ' data rows</div>';
+    $('preview-area').innerHTML = html;
+  } catch (e) {
+    toast('Preview failed: ' + e.message, false);
+  }
+  $('btn-preview').disabled = false;
+  $('btn-preview').textContent = 'Load Preview';
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// ---- Run ----
+async function startRun() {
+  $('btn-run').disabled = true;
+  $('run-summary').classList.remove('active');
+  $('run-spinner').classList.add('active');
+
+  const body = {};
+  if ($('opt-resume').checked) body.resume = true;
+  const lim = parseInt($('opt-limit').value);
+  if (lim > 0) body.limit = lim;
+
+  try {
+    const d = await api('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    $('run-spinner').classList.remove('active');
+    if (d.error) {
+      toast(d.error, false);
+    } else {
+      $('stat-total').querySelector('.num').textContent = d.total || 0;
+      $('stat-ok').querySelector('.num').textContent = d.success || 0;
+      $('stat-err').querySelector('.num').textContent = d.errors || 0;
+      $('stat-skip').querySelector('.num').textContent = d.skipped || 0;
+      $('run-summary').classList.add('active');
+      toast('Scraping complete!');
+    }
+  } catch (e) {
+    $('run-spinner').classList.remove('active');
+    toast('Run failed: ' + e.message, false);
+  }
+  $('btn-run').disabled = false;
+}
+
+// ---- Init ----
+if (new URLSearchParams(location.search).get('auth') === 'success') {
+  toast('Google account connected!');
+  history.replaceState(null, '', '/');
+}
+loadConfig();
+checkAuth();
+</script>
+</body>
+</html>

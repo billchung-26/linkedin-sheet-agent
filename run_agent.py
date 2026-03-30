@@ -380,9 +380,9 @@ def _chrome_login_pause(context):
 
 
 def _run_bb_browser(config, valid, start_row, title_col, company_col, worksheet):
-    """Scrape profiles using bb-browser (real Chrome session, no new window)."""
+    """Scrape profiles using bb-browser. Returns list of per-row result dicts."""
     if not check_bb_browser_available():
-        raise SystemExit(
+        raise RuntimeError(
             "bb-browser is not installed. Install it with:\n"
             "  npm install -g bb-browser\n"
             "Then install the Chrome extension and run the daemon.\n"
@@ -395,6 +395,7 @@ def _run_bb_browser(config, valid, start_row, title_col, company_col, worksheet)
     print("    2. Daemon is running: bb-browser daemon")
     print("    3. You are logged into LinkedIn in Chrome\n")
 
+    results = []
     for idx, url in valid:
         row = start_row + idx
         username = extract_username_from_url(url)
@@ -403,14 +404,21 @@ def _run_bb_browser(config, valid, start_row, title_col, company_col, worksheet)
         print(f"  -> Title: {title}  |  Company: {company}")
         worksheet.update_acell(f"{title_col}{row}", title)
         worksheet.update_acell(f"{company_col}{row}", company)
+        is_error = title.startswith("(") and ("error" in title.lower() or "timeout" in title.lower())
+        results.append({
+            "row": row, "url": url, "title": title, "company": company,
+            "status": "error" if is_error else "success",
+        })
         time.sleep(2)
+    return results
 
 
 def _run_playwright(config, valid, start_row, title_col, company_col, worksheet,
                     headless, use_chrome):
-    """Scrape profiles using Playwright (separate browser window)."""
+    """Scrape profiles using Playwright. Returns list of per-row result dicts."""
     from playwright.sync_api import sync_playwright
 
+    results = []
     with sync_playwright() as p:
         context, close_fn = _launch_browser(p, use_chrome=use_chrome, headless=headless)
         try:
@@ -426,12 +434,18 @@ def _run_playwright(config, valid, start_row, title_col, company_col, worksheet,
                 )
                 worksheet.update_acell(f"{title_col}{row}", title)
                 worksheet.update_acell(f"{company_col}{row}", company)
+                is_error = title.startswith("(") and ("error" in title.lower() or "timeout" in title.lower())
+                results.append({
+                    "row": row, "url": url, "title": title, "company": company,
+                    "status": "error" if is_error else "success",
+                })
                 time.sleep(4)
         finally:
             try:
                 close_fn()
             except Exception:
                 pass
+    return results
 
 
 def run(
@@ -442,7 +456,10 @@ def run(
     use_chrome: bool = False,
     use_bb_browser: bool = True,
     limit: Optional[int] = None,
-):
+) -> dict:
+    """Run the scraping pipeline. Returns a summary dict:
+    {"total", "success", "errors", "skipped", "results": [...]}.
+    """
     client = get_sheet_client()
     sh = client.open_by_key(config["sheet_id"])
     worksheet = sh.worksheet(config["sheet_name"])
@@ -462,16 +479,20 @@ def run(
         urls[i - (start_row - 1)] = col_values[i]
     urls = [normalize_linkedin_url(u) for u in urls]
     valid = [(i, u) for i, u in enumerate(urls) if u]
+    total_urls = len(col_values) - (start_row - 1) if len(col_values) >= start_row else 0
+    skipped = total_urls - len(valid)
 
     if resume:
         title_col_idx = gspread.utils.a1_to_rowcol(f"{title_col}1")[1]
         title_values = worksheet.col_values(title_col_idx)
+        pre_resume = len(valid)
         valid = [
             (i, u)
             for i, u in valid
             if (start_row - 1 + i >= len(title_values))
             or not (title_values[start_row - 1 + i] or "").strip()
         ]
+        skipped += pre_resume - len(valid)
         print(f"Resume: {len(valid)} rows left to fill (skipping already filled).")
     else:
         print(f"Found {len(valid)} valid LinkedIn URLs (from row {start_row}).")
@@ -484,15 +505,26 @@ def run(
         for idx, u in valid[:5]:
             print(f"  Row {start_row + idx}: {u}")
         print("Dry run done. Remove --dry-run to run for real.")
-        return
+        return {"total": total_urls, "success": 0, "errors": 0, "skipped": skipped, "results": []}
 
     if use_bb_browser:
-        _run_bb_browser(config, valid, start_row, title_col, company_col, worksheet)
+        results = _run_bb_browser(config, valid, start_row, title_col, company_col, worksheet)
     else:
-        _run_playwright(config, valid, start_row, title_col, company_col, worksheet,
-                        headless, use_chrome)
+        results = _run_playwright(config, valid, start_row, title_col, company_col, worksheet,
+                                  headless, use_chrome)
 
-    print("Done. Check your sheet for Title and Company columns.")
+    success = sum(1 for r in results if r["status"] == "success")
+    errors = sum(1 for r in results if r["status"] == "error")
+    summary = {
+        "total": total_urls,
+        "processed": len(results),
+        "success": success,
+        "errors": errors,
+        "skipped": skipped,
+        "results": results,
+    }
+    print(f"Done. {success} succeeded, {errors} errors, {skipped} skipped.")
+    return summary
 
 
 def main():
